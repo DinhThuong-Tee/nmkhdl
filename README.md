@@ -47,16 +47,18 @@ Dự án được xây dựng dựa trên luồng xử lý:
 
 1. Clone repository
 
-git clone https://github.com/[username]/quang-ninh-aquaculture-forecast.git
-cd quang-ninh-aquaculture-forecast
+git clone https://github.com/DinhThuong-Tee/nmkhdl.git
 
 2. Cài đặt thư viện
 
 pip install -r requirements.txt
 
 3. Chạy Dashboard
-
-streamlit run app.py
+   python model/basemodel.py
+   python model/finetune_cobia.py
+   python model/finetune_oyster.py
+   python model/metal.py
+   streamlit run interface/main.py
 
 📁 Cấu trúc thư mục
 
