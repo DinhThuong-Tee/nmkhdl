@@ -54,11 +54,11 @@ git clone https://github.com/DinhThuong-Tee/nmkhdl.git
 pip install -r requirements.txt
 
 3. Chạy Dashboard
-   python model/basemodel.py
-   python model/finetune_cobia.py
-   python model/finetune_oyster.py
-   python model/metal.py
-   streamlit run interface/main.py
+   - python model/basemodel.py
+   - python model/finetune_cobia.py
+   - python model/finetune_oyster.py
+   - python model/metal.py
+   - streamlit run interface/main.py
 
 📁 Cấu trúc thư mục
 
