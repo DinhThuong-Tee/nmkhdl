@@ -11,13 +11,17 @@ from basemodel import *
 
 warnings.filterwarnings('ignore')
 
-def finetune_model(base_model_path, new_data_path, output_path, features_list):
+def finetune_model(base_model_path, new_data_path, output_path, features_list, learning_rate=0.005, n_estimators=500, early_stopping_rounds=30):
     """
     Hàm Fine-tune: Cập nhật mô hình cũ với dữ liệu mới.
     Sử dụng temporal split và early stopping để tránh overfitting.
     """
     base_model_path = str(base_model_path)
     output_path = str(output_path)
+    
+    if not os.path.exists(str(new_data_path)):
+        print(f"Lỗi: Không tìm thấy file dữ liệu mới tại {new_data_path}")
+        return
     
     print(f"\n🔧 BẮT ĐẦU FINE-TUNE MÔ HÌNH TỪ: {base_model_path}")
     
@@ -73,7 +77,7 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
         
         # B. Giảm tốc độ học (Learning Rate)
         # Khi fine-tune, ta nên học chậm lại để không "quên" kiến thức cũ quá nhanh
-        estimator.set_params(learning_rate=0.005, n_estimators=500, early_stopping_rounds=30)
+        estimator.set_params(learning_rate=learning_rate, n_estimators=n_estimators, early_stopping_rounds=early_stopping_rounds)
         
         # C. Train tiếp (Incremental Learning) với Early Stopping
         # Tham số quan trọng nhất: xgb_model=old_booster
