@@ -121,15 +121,17 @@ def generate_hsi_files(
     print(f" - {oyster_path}")
     print(f" - {cobia_path}")
     
-BASE_DIR = pathlib.Path(__file__).resolve().parent
-PROJECT_DIR = BASE_DIR.parent
-DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "toa_do_qn.csv"
-OUT_DIR = PROJECT_DIR / "data" / "data_quang_ninh"
+if __name__ == "__main__":
+    BASE_DIR = pathlib.Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "toa_do_qn.csv"
+    OUT_DIR = PROJECT_DIR / "data" / "data_quang_ninh"
 
-generate_hsi_files(
-    coord_csv=DATA_PATH,
-    start_year=2026,
-    start_quarter=1,
-    n_quarters=4,
-    out_dir=OUT_DIR
-)
+    generate_hsi_files(
+        coord_csv=DATA_PATH,
+        start_year=2026,
+        start_quarter=1,
+        n_quarters=4,
+        out_dir=OUT_DIR
+    )
+
