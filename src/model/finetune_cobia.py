@@ -14,6 +14,7 @@ warnings.filterwarnings('ignore')
 def finetune_model(base_model_path, new_data_path, output_path, features_list):
     """
     Hàm Fine-tune: Cập nhật mô hình cũ với dữ liệu mới.
+    Sử dụng temporal split và early stopping để tránh overfitting.
     """
     base_model_path = str(base_model_path)
     output_path = str(output_path)
@@ -47,13 +48,20 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
         return
 
     # Đảm bảo dữ liệu mới có đủ các cột như dữ liệu cũ
-    # (Nếu thiếu cột nào thì điền 0 hoặc báo lỗi, ở đây ta giả định dữ liệu chuẩn)
-    X_new = df_ft[input_cols_old]
-    y_new = df_ft[features_list]
+    X_all = df_ft[input_cols_old]
+    y_all = df_ft[features_list]
+    
+    # ===== TEMPORAL TRAIN/VAL SPLIT =====
+    df_train, df_val = temporal_train_val_split(df_ft, n_val_quarters=2)
+    
+    X_train = df_train[input_cols_old]
+    y_train = df_train[features_list]
+    X_val = df_val[input_cols_old]
+    y_val = df_val[features_list]
 
-    print(f"📊 Kích thước dữ liệu Fine-tune: {len(X_new)} mẫu")
+    print(f"📊 Kích thước dữ liệu Fine-tune: Train={len(X_train)}, Val={len(X_val)}")
 
-    # 4. THỰC HIỆN FINE-TUNE (CẬP NHẬT TRỌNG SỐ)
+    # 4. THỰC HIỆN FINE-TUNE (CẬP NHẬT TRỌNG SỐ) VỚI EARLY STOPPING
     # Vì model là MultiOutputRegressor (chứa nhiều model con), ta phải update từng cái
     
     print("⏳ Đang cập nhật kiến thức mới cho mô hình...")
@@ -67,26 +75,41 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
         
         # B. Giảm tốc độ học (Learning Rate)
         # Khi fine-tune, ta nên học chậm lại để không "quên" kiến thức cũ quá nhanh
-        estimator.set_params(learning_rate=0.005) 
+        estimator.set_params(learning_rate=0.005, n_estimators=500, early_stopping_rounds=30)
         
-        # C. Train tiếp (Incremental Learning)
+        # C. Train tiếp (Incremental Learning) với Early Stopping
         # Tham số quan trọng nhất: xgb_model=old_booster
         # Nghĩa là: "Đừng học từ đầu, hãy học tiếp từ cái cũ"
-        estimator.fit(X_new, y_new.iloc[:, i], xgb_model=old_booster)
+        estimator.fit(
+            X_train, y_train.iloc[:, i],
+            xgb_model=old_booster,
+            eval_set=[(X_val, y_val.iloc[:, i])],
+            verbose=False
+        )
         
-    # 5. ĐÁNH GIÁ LẠI TRÊN DỮ LIỆU MỚI
-    print("\n📊 KẾT QUẢ SAU KHI FINE-TUNE (TRÊN TẬP DỮ LIỆU MỚI):")
+    # 5. ĐÁNH GIÁ TRÊN TẬP TRAIN
+    print("\n📊 KẾT QUẢ SAU KHI FINE-TUNE (TRAINING):")
     print("-" * 50)
-    y_pred = model.predict(X_new)
-    rmse = np.sqrt(mean_squared_error(y_new, y_pred, multioutput='raw_values'))
+    y_train_pred = model.predict(X_train)
+    rmse_train = np.sqrt(mean_squared_error(y_train, y_train_pred, multioutput='raw_values'))
     
     for i, col_name in enumerate(features_list):
-        print(f"   🔹 {col_name:<15} RMSE: {rmse[i]:.4f}")
+        print(f"   🔹 {col_name:<15} RMSE(train): {rmse_train[i]:.4f}")
+    
+    # 6. ĐÁNH GIÁ TRÊN TẬP VALIDATION (OUT-OF-SAMPLE)
+    print("\n📊 KẾT QUẢ SAU KHI FINE-TUNE (VALIDATION - OUT-OF-SAMPLE):")
+    print("-" * 50)
+    y_val_pred = model.predict(X_val)
+    rmse_val = np.sqrt(mean_squared_error(y_val, y_val_pred, multioutput='raw_values'))
+    
+    for i, col_name in enumerate(features_list):
+        print(f"   🔹 {col_name:<15} RMSE(val): {rmse_val[i]:.4f}")
     
     print("-" * 50)
-    print(f"👉 RMSE trung bình: {np.mean(rmse):.4f}")
+    print(f"👉 RMSE trung bình (train): {np.mean(rmse_train):.4f}")
+    print(f"👉 RMSE trung bình (val):   {np.mean(rmse_val):.4f}")
 
-    # 6. LƯU MÔ HÌNH MỚI (FINETUNED MODEL)
+    # 7. LƯU MÔ HÌNH MỚI (FINETUNED MODEL)
     joblib.dump(model, output_path)
     # Lưu luôn metadata cho model mới (thực ra vẫn y hệt cái cũ)
     joblib.dump((input_cols_old, features_list), output_path.replace('.pkl', '_features.pkl'))
