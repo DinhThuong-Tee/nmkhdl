@@ -1,9 +1,13 @@
+import torch
+import torch.nn as nn
 
-def train_model(model, train_loader, epochs=10):
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    for epoch in range(epochs):
-        for x_batch, y_batch in train_loader:
-            optimizer.zero_grad()
-            outputs = model(x_batch)
-            loss = criterion(outputs, y_batch)
+class LSTMForecaster(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(LSTMForecaster, self).__init__()
+        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        out, _ = self.lstm(x)
+        out = self.fc(out[:, -1, :])
+        return out
