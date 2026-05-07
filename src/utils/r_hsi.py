@@ -114,7 +114,6 @@ def compute_R_for_all_stations_all_quarters(
 if __name__ == "__main__":
     BASE_DIR = pathlib.Path(__file__).resolve().parent
     PROJECT_DIR = BASE_DIR.parent
-    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "toa_do_qn.csv"
     OUT_DIR = PROJECT_DIR / "data" / "data_quang_ninh"
 
     # Cho hàu

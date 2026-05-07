@@ -20,7 +20,7 @@ def _load_model(model_path):
 
 @functools.lru_cache(maxsize=4)
 def _load_csv(csv_path):
-    """Load and cache a CSV file as a DataFrame (returns a copy to avoid mutation)."""
+    """Load and cache a CSV file as a DataFrame."""
     return pd.read_csv(str(csv_path))
 
 
