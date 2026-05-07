@@ -102,7 +102,7 @@ def temporal_train_val_split(df, n_val_quarters=2):
     df_train, df_val : tuple of pd.DataFrame
     """
     val_mask = df.groupby('Station')['Date'].transform(
-        lambda x: x >= x.nlargest(n_val_quarters).min()
+        lambda x: x >= x.nlargest(min(n_val_quarters, len(x) - 1)).min() if len(x) > 1 else pd.Series([False]*len(x), index=x.index)
     )
     df_train = df[~val_mask].copy()
     df_val = df[val_mask].copy()

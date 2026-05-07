@@ -25,7 +25,7 @@ def temporal_train_val_split(df, date_col="Quarter", n_val_quarters=2):
     làm tập validation.
     """
     val_mask = df.groupby(["X", "Y"])[date_col].transform(
-        lambda x: x >= x.nlargest(n_val_quarters).min()
+        lambda x: x >= x.nlargest(min(n_val_quarters, len(x)-1)).min() if len(x) > 1 else pd.Series([False]*len(x), index=x.index)
     )
     df_train = df[~val_mask].copy()
     df_val = df[val_mask].copy()
