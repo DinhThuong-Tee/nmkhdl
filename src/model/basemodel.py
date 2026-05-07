@@ -43,7 +43,7 @@ def prepare_time_series_data(csv_path, features_list, lags=[1, 4]):
     #    limit_direction='forward' đảm bảo không dùng giá trị tương lai để nội suy
     for col in valid_f:
         df[col] = df.groupby('Station')[col].transform(
-            lambda x: x.interpolate(limit_direction='forward').fillna(x.median())
+            lambda x: x.ffill().fillna(x.median())
         )
 
     # 5. Tạo các cột Lag (Trễ)
