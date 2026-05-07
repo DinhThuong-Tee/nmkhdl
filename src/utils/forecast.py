@@ -1,7 +1,33 @@
 import joblib
 import pandas as pd
 import numpy as np
+import functools
 from pathlib import Path
+
+
+# ===== CACHED LOADERS =====
+# Avoid redundant disk I/O when forecast functions are called repeatedly
+# (e.g., during Streamlit's parallel HSI computation for 99 stations).
+
+_PROJECT_DIR = Path(__file__).resolve().parent.parent
+
+
+@functools.lru_cache(maxsize=8)
+def _load_model(model_path):
+    """Load and cache a serialized model from disk."""
+    return joblib.load(str(model_path))
+
+
+@functools.lru_cache(maxsize=4)
+def _load_csv(csv_path):
+    """Load and cache a CSV file as a DataFrame (returns a copy to avoid mutation)."""
+    return pd.read_csv(str(csv_path))
+
+
+def _get_csv_copy(csv_path):
+    """Return a fresh copy of a cached CSV DataFrame."""
+    return _load_csv(csv_path).copy()
+
 
 def predict_future_metal_field_for_station(
     start_year,
@@ -39,19 +65,16 @@ def predict_future_metal_field_for_station(
         "year", "quarter" và các cột kim loại dự báo (giá trị không âm).
     """
 
-    BASE_DIR = Path(__file__).resolve().parent
-    PROJECT_DIR = BASE_DIR.parent
-
-    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
-    model_path = PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
+    DATA_PATH = _PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    model_path = _PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
 
     # ===== PREDICT cho 1 trạm =====
-    df = pd.read_csv(DATA_PATH)
+    df = _get_csv_copy(DATA_PATH)
     df_station = df[(df["X"] == x) & (df["Y"] == y)]
 
     target_cols = ["CN","As","Cd","Pb","Cu","Hg","Zn","Total_Cr"]
 
-    model, feature_cols = joblib.load(model_path)
+    model, feature_cols = _load_model(model_path)
 
     df_station = df_station.copy()
     df_station["Quarter"] = pd.to_datetime(df_station["Quarter"])
@@ -152,22 +175,19 @@ def predict_future_non_metal_field_for_station(
         DataFrame gồm các dòng cho từng quý dự báo, chứa các cột "year", "quarter"
         và các cột biến môi trường không phải kim loại (giá trị đã được cắt ≥ 0).
     """
-    BASE_DIR = Path(__file__).resolve().parent
-    PROJECT_DIR = BASE_DIR.parent
-
-    csv_data_path = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    csv_data_path = _PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
     if species == "cobia":
-        model_path = PROJECT_DIR / "model" / "output" / "hk_cobia_finetuned.pkl"
+        model_path = _PROJECT_DIR / "model" / "output" / "hk_cobia_finetuned.pkl"
     elif species == "oyster":
-        model_path = PROJECT_DIR / "model" / "output" / "hk_oyster_finetuned.pkl"
+        model_path = _PROJECT_DIR / "model" / "output" / "hk_oyster_finetuned.pkl"
     # ===== LOAD MODEL + METADATA =====
-    model = joblib.load(model_path)
-    input_cols, features = joblib.load(
-        str(model_path).replace(".pkl", "_features.pkl")
-    )
+    loaded = _load_model(model_path)
+    model = loaded
+    meta_path = str(model_path).replace(".pkl", "_features.pkl")
+    input_cols, features = _load_model(meta_path)
 
     # ===== LOAD DATA =====
-    df = pd.read_csv(csv_data_path)
+    df = _get_csv_copy(csv_data_path)
 
     df["Date"] = pd.to_datetime(df["Quarter"], errors="coerce")
     df = df.dropna(subset=["Date"])
@@ -273,14 +293,16 @@ def predict_for_station(
     )
     return df_merged
 
-#Test
-df = predict_for_station(
-    species="cobia",
-    x=2318587,
-    y=428692,
-    start_year=2026,
-    start_quarter=1,
-    n_quarters=4
-)
-print(df)
-df.info()
+
+if __name__ == "__main__":
+    # Test code — only runs when this file is executed directly
+    df = predict_for_station(
+        species="cobia",
+        x=2318587,
+        y=428692,
+        start_year=2026,
+        start_quarter=1,
+        n_quarters=4
+    )
+    print(df)
+    df.info()

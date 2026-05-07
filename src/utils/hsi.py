@@ -137,38 +137,40 @@ def compute_hsi(df_forecast, species):
 
     return df
 
-#Test
-BASE_DIR = pathlib.Path(__file__).resolve().parent
-PROJECT_DIR = BASE_DIR.parent
-DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
-model_path = PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
 
-# ===== COMPUTE HSI CHO TOÀN BỘ DỮ LIỆU VÀ TÍNH PHÂN PHỐI NHÃN HSI =====
-df = pd.read_csv(DATA_PATH)
+if __name__ == "__main__":
+    # Test/analysis code — only runs when this file is executed directly
+    BASE_DIR = pathlib.Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    model_path = PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
 
-# Tính HSI (ví dụ cho 'oyster'); nếu muốn chuyên biệt cho 'cobia' đổi species
-df_hsi = compute_hsi(df, species="oyster")
+    # ===== COMPUTE HSI CHO TOÀN BỘ DỮ LIỆU VÀ TÍNH PHÂN PHỐI NHÃN HSI =====
+    df = pd.read_csv(DATA_PATH)
 
-# Hiển thị vài hàng đầu để kiểm tra
-print(df_hsi[["Station", "Quarter", "HSI", "HSI_Level"]].head())
+    # Tính HSI (ví dụ cho 'oyster'); nếu muốn chuyên biệt cho 'cobia' đổi species
+    df_hsi = compute_hsi(df, species="oyster")
 
-# Tính phân phối nhãn HSI (counts + %)
-counts = df_hsi["HSI_Level"].value_counts()
-percent = df_hsi["HSI_Level"].value_counts(normalize=True) * 100
-print("\nHSI Level counts:")
-print(counts.to_string())
-print("\nHSI Level percentages:")
-for lvl, p in percent.items():
-    print(f"  {lvl}: {p:.1f}%")
+    # Hiển thị vài hàng đầu để kiểm tra
+    print(df_hsi[["Station", "Quarter", "HSI", "HSI_Level"]].head())
 
-min_hsi = df_hsi["HSI"].min()
-rows_min = df_hsi[df_hsi["HSI"] == min_hsi]
-print(f"\nMin HSI = {min_hsi:.6f}")
-print("Rows with min HSI:")
-print(rows_min[["Station", "Quarter", "HSI", "HSI_Level"]].to_string(index=False))
+    # Tính phân phối nhãn HSI (counts + %)
+    counts = df_hsi["HSI_Level"].value_counts()
+    percent = df_hsi["HSI_Level"].value_counts(normalize=True) * 100
+    print("\nHSI Level counts:")
+    print(counts.to_string())
+    print("\nHSI Level percentages:")
+    for lvl, p in percent.items():
+        print(f"  {lvl}: {p:.1f}%")
 
-max_hsi = df_hsi["HSI"].max()
-rows_max = df_hsi[df_hsi["HSI"] == max_hsi]
-print(f"\nMax HSI = {max_hsi:.6f}")
-print("Rows with max HSI:")
-print(rows_max[["Station", "Quarter", "HSI", "HSI_Level"]].to_string(index=False))
+    min_hsi = df_hsi["HSI"].min()
+    rows_min = df_hsi[df_hsi["HSI"] == min_hsi]
+    print(f"\nMin HSI = {min_hsi:.6f}")
+    print("Rows with min HSI:")
+    print(rows_min[["Station", "Quarter", "HSI", "HSI_Level"]].to_string(index=False))
+
+    max_hsi = df_hsi["HSI"].max()
+    rows_max = df_hsi[df_hsi["HSI"] == max_hsi]
+    print(f"\nMax HSI = {max_hsi:.6f}")
+    print("Rows with max HSI:")
+    print(rows_max[["Station", "Quarter", "HSI", "HSI_Level"]].to_string(index=False))
