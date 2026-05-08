@@ -4,38 +4,24 @@ import numpy as np
 import functools
 from pathlib import Path
 
-
-# ===== CACHED LOADERS =====
-# Avoid redundant disk I/O when forecast functions are called repeatedly
-# (e.g., during Streamlit's parallel HSI computation for 99 stations).
-
 _PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
 @functools.lru_cache(maxsize=8)
 def _load_model(model_path):
-    """Load and cache a serialized model from disk."""
     return joblib.load(str(model_path))
 
 
 @functools.lru_cache(maxsize=4)
 def _load_csv(csv_path):
-    """Load and cache a CSV file as a DataFrame (returns a copy to avoid mutation)."""
     return pd.read_csv(str(csv_path))
 
 
 def _get_csv_copy(csv_path):
-    """Return a fresh copy of a cached CSV DataFrame."""
     return _load_csv(csv_path).copy()
 
 
-def predict_future_metal_field_for_station(
-    start_year,
-    start_quarter,
-    n_quarters,
-    x,
-    y
-):
+def predict_future_metal_field_for_station(start_year, start_quarter, n_quarters, x, y):
     """
     Rolling forecast nồng độ kim loại tại một trạm.
 
@@ -72,7 +58,7 @@ def predict_future_metal_field_for_station(
     df = _get_csv_copy(DATA_PATH)
     df_station = df[(df["X"] == x) & (df["Y"] == y)]
 
-    target_cols = ["CN","As","Cd","Pb","Cu","Hg","Zn","Total_Cr"]
+    target_cols = ["CN", "As", "Cd", "Pb", "Cu", "Hg", "Zn", "Total_Cr"]
 
     model, feature_cols = _load_model(model_path)
 
@@ -113,14 +99,14 @@ def predict_future_metal_field_for_station(
         # update history
         history = pd.concat(
             [history.iloc[1:], pd.DataFrame([y_pred], columns=target_cols)],
-            ignore_index=True
+            ignore_index=True,
         )
 
         quarter += 1
         if quarter > 4:
             quarter = 1
             year += 1
-    
+
     df_future = pd.DataFrame(results)
 
     # Clip giá trị âm (ràng buộc vật lý)
@@ -129,13 +115,9 @@ def predict_future_metal_field_for_station(
 
     return df_future
 
+
 def predict_future_non_metal_field_for_station(
-    species,
-    x,
-    y,
-    start_year,
-    start_quarter,
-    n_quarters=4
+    species, x, y, start_year, start_quarter, n_quarters=4
 ):
     """
     Rolling forecast các biến môi trường không phải kim loại
@@ -225,17 +207,14 @@ def predict_future_non_metal_field_for_station(
 
         y_pred = model.predict(X_pred)[0]
 
-        result = {
-            "year": year,
-            "quarter": quarter
-        }
+        result = {"year": year, "quarter": quarter}
         result.update(dict(zip(features, y_pred)))
         results.append(result)
 
         # ---- cập nhật history ----
         history = pd.concat(
             [history.iloc[1:], pd.DataFrame([y_pred], columns=features)],
-            ignore_index=True
+            ignore_index=True,
         )
 
         quarter += 1
@@ -251,14 +230,8 @@ def predict_future_non_metal_field_for_station(
 
     return df_future
 
-def predict_for_station(
-    species,
-    x,
-    y,
-    start_year,
-    start_quarter,
-    n_quarters=4
-):
+
+def predict_for_station(species, x, y, start_year, start_quarter, n_quarters=4):
     """
     Dự báo một quý cho trạm cụ thể.
 
@@ -276,33 +249,27 @@ def predict_for_station(
         y=y,
         start_year=start_year,
         start_quarter=start_quarter,
-        n_quarters=n_quarters
+        n_quarters=n_quarters,
     )
     df2 = predict_future_metal_field_for_station(
         start_year=start_year,
         start_quarter=start_quarter,
         n_quarters=n_quarters,
         x=x,
-        y=y
+        y=y,
     )
-    df_merged = pd.merge(
-        df1,
-        df2,
-        on=["year", "quarter"],
-        how="inner"
-    )
+    df_merged = pd.merge(df1, df2, on=["year", "quarter"], how="inner")
     return df_merged
 
 
 if __name__ == "__main__":
-    # Test code — only runs when this file is executed directly
     df = predict_for_station(
         species="cobia",
         x=2318587,
         y=428692,
         start_year=2026,
         start_quarter=1,
-        n_quarters=4
+        n_quarters=4,
     )
     print(df)
     df.info()

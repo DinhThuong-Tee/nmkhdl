@@ -47,9 +47,7 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
         return
 
     # Đảm bảo dữ liệu mới có đủ các cột như dữ liệu cũ
-    X_all = df_ft[input_cols_old]
-    y_all = df_ft[features_list]
-    
+
     # ===== TEMPORAL TRAIN/VAL SPLIT =====
     df_train, df_val = temporal_train_val_split(df_ft, n_val_quarters=2)
     

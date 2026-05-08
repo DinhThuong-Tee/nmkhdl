@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pathlib
 
+
 def compute_hsi(df_forecast, species):
     """
     Tính HSI cho forecast theo loài (oyster | cobia)
@@ -19,50 +20,49 @@ def compute_hsi(df_forecast, species):
     """
     HSI_RULES = {
         "oyster": {
-            "DO":          {"min_val": 5},
+            "DO": {"min_val": 5},
             "Temperature": {"low": 20, "high": 28},
-            "pH":          {"low": 7.5, "high": 8.0},
-            "Salinity":    {"low": 20, "high": 25},
-            "Alkalinity":  {"low": 60, "high": 180},
-            "Transparency":{"low": 20, "high": 50},
-            "NH3":         {"max_val": 0.3},
-            "H2S":         {"max_val": 0.05},
-            "BOD5":        {"max_val": 50},
-            "COD":         {"max_val": 150},
-            "Coliform":    {"max_val": 5000},
-            "TSS":         {"max_val": 50},
-            "CN":          {"max_val": 0.1},
-            "As":          {"max_val": 0.02},
-            "Cd":          {"max_val": 0.005},
-            "Pb":          {"max_val": 0.05},
-            "Cu":          {"max_val": 0.2},
-            "Hg":          {"max_val": 0.001},
-            "Zn":          {"max_val": 0.5},
-            "Total_Cr":    {"max_val": 0.1},
+            "pH": {"low": 7.5, "high": 8.0},
+            "Salinity": {"low": 20, "high": 25},
+            "Alkalinity": {"low": 60, "high": 180},
+            "Transparency": {"low": 20, "high": 50},
+            "NH3": {"max_val": 0.3},
+            "H2S": {"max_val": 0.05},
+            "BOD5": {"max_val": 50},
+            "COD": {"max_val": 150},
+            "Coliform": {"max_val": 5000},
+            "TSS": {"max_val": 50},
+            "CN": {"max_val": 0.1},
+            "As": {"max_val": 0.02},
+            "Cd": {"max_val": 0.005},
+            "Pb": {"max_val": 0.05},
+            "Cu": {"max_val": 0.2},
+            "Hg": {"max_val": 0.001},
+            "Zn": {"max_val": 0.5},
+            "Total_Cr": {"max_val": 0.1},
         },
-
         "cobia": {
-            "DO":          {"min_val": 6},
+            "DO": {"min_val": 6},
             "Temperature": {"low": 24, "high": 28},
-            "pH":          {"low": 8.0, "high": 8.5},
-            "Salinity":    {"low": 27, "high": 33},
-            "Alkalinity":  {"low": 60, "high": 180},
-            "Transparency":{"low": 20, "high": 50},
-            "NH3":         {"max_val": 0.1},
-            "PO4":         {"max_val": 0.2},
-            "BOD5":        {"max_val": 50},
-            "COD":         {"max_val": 150},
-            "Coliform":    {"max_val": 5000},
-            "TSS":         {"max_val": 50},
-            "CN":          {"max_val": 0.1},
-            "As":          {"max_val": 0.02},
-            "Cd":          {"max_val": 0.005},
-            "Pb":          {"max_val": 0.05},
-            "Cu":          {"max_val": 0.2},
-            "Hg":          {"max_val": 0.001},
-            "Zn":          {"max_val": 0.5},
-            "Total_Cr":    {"max_val": 0.1},
-        }
+            "pH": {"low": 8.0, "high": 8.5},
+            "Salinity": {"low": 27, "high": 33},
+            "Alkalinity": {"low": 60, "high": 180},
+            "Transparency": {"low": 20, "high": 50},
+            "NH3": {"max_val": 0.1},
+            "PO4": {"max_val": 0.2},
+            "BOD5": {"max_val": 50},
+            "COD": {"max_val": 150},
+            "Coliform": {"max_val": 5000},
+            "TSS": {"max_val": 50},
+            "CN": {"max_val": 0.1},
+            "As": {"max_val": 0.02},
+            "Cd": {"max_val": 0.005},
+            "Pb": {"max_val": 0.05},
+            "Cu": {"max_val": 0.2},
+            "Hg": {"max_val": 0.001},
+            "Zn": {"max_val": 0.5},
+            "Total_Cr": {"max_val": 0.1},
+        },
     }
 
     def _suitability_score(x, low=None, high=None, max_val=None, min_val=None):
@@ -87,7 +87,6 @@ def compute_hsi(df_forecast, species):
             return min(1.0, x / min_val)
 
         return 0.0
-
 
     species = species.lower()
     if species not in HSI_RULES:
@@ -139,7 +138,6 @@ def compute_hsi(df_forecast, species):
 
 
 if __name__ == "__main__":
-    # Test/analysis code — only runs when this file is executed directly
     BASE_DIR = pathlib.Path(__file__).resolve().parent
     PROJECT_DIR = BASE_DIR.parent
     DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
