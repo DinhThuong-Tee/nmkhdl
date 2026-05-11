@@ -77,3 +77,66 @@ def add_synthetic_alkalinity(
 
     df["Alkalinity"] = alk
     return df
+
+
+
+# =========================
+# LOAD DATA
+# =========================
+df = pd.read_excel("data/data_quang_ninh/Tong-hop-21-24-gen.xlsx")
+coords = pd.read_csv("data/data_quang_ninh/toa_do_qn.csv")  # cột: mahieu, lat, lon
+
+# =========================
+# SELECT + RENAME COLUMNS
+# =========================
+df = df.rename(columns={
+    "KHM": "Station",
+    "Quý": "Quarter",
+    "Nhiệt độ": "Temperature",
+    "pH": "pH",
+    "DO": "DO",
+    "Độ muối": "Salinity",
+    "Amoni": "NH3",
+    "Phosphat": "PO4",
+    "TSS": "TSS",
+    "Coliform": "Coliform",
+    "Độ trong": "Transparency",
+    "Tổng dầu, mỡ khoáng": "COD",
+    "Tổng xianua": "CN",
+    "As": "As",
+    "Cd": "Cd",
+    "Pb": "Pb",
+    "Cu": "Cu",
+    "Hg": "Hg",
+    "Zn": "Zn",
+    "Cr": "Total_Cr"
+})
+
+# Chỉ giữ cột cần thiết
+KEEP_COLS = [
+    "Station","Quarter","DO","Temperature","pH","Salinity",
+    "NH3","PO4","TSS","Coliform","Transparency",
+    "COD","CN","As","Cd","Pb","Cu","Hg","Zn","Total_Cr"
+]
+df = df[KEEP_COLS]
+
+# =========================
+# JOIN TOẠ ĐỘ
+# =========================
+coords = coords.rename(columns={"maHieu": "Station"})
+df = df.merge(coords, on="Station", how="left")
+
+# =========================
+# ADD SYNTHETIC FEATURES
+# =========================
+df = add_synthetic_h2s(df)
+df = add_synthetic_cod(df)
+df = add_synthetic_bod5(df)
+df = add_synthetic_alkalinity(df)
+
+# =========================
+# FINAL OUTPUT
+# =========================
+df.to_csv("data/data_quang_ninh/qn_env_clean_ready.csv", index=False)
+
+print("✅ Done: qn_env_clean_ready.csv")
