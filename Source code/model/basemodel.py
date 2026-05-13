@@ -24,50 +24,46 @@ COBIA_FEATURES = [
 ]
 
 
-# Hàm đọc CSV, làm sạch, điền dữ liệu thiếu và tạo Lag Features.
 def prepare_time_series_data(csv_path, features_list, lags=[1, 4]):
-    csv_path = str(csv_path)
-    df = pd.read_csv(csv_path)
+    import pandas as pd
+    # 1. Đọc dữ liệu
+    df = pd.read_csv(str(csv_path), encoding='utf-8-sig')
+    df.columns = df.columns.str.strip()
     
-    # Chỉ giữ lại các cột cần thiết
-    keep_cols = ['Station', 'Quarter'] + [f for f in features_list if f in df.columns]
-    df = df[keep_cols]
-
-    # Xử lý thời gian (đổi thành thời gian theo quý)
+    # 2. Ép tên cột đầu tiên là Station để chắc chắn
+    df.rename(columns={df.columns[0]: 'Station'}, inplace=True)
+    
+    # 3. Lọc các cột cần thiết và xử lý ngày tháng
+    valid_f = [f for f in features_list if f in df.columns]
+    df = df[['Station', 'Quarter'] + valid_f].copy()
     df['Date'] = pd.to_datetime(df['Quarter'], errors='coerce')
-    df = df.dropna(subset=['Date'])
-    df = df.sort_values(by=['Station', 'Date'])
+    df = df.dropna(subset=['Date']).sort_values(['Station', 'Date'])
 
-    # Điền dữ liệu thiếu (Imputation) theo trạm (một số trạm bị thiếu quý, ví dụ thiếu 2020Q2 thì lấy trung bình của Q1 và Q3)
-    def fill_missing(group):
-        # Nội suy tuyến tính
-        group[features_list] = group[features_list].interpolate(method='linear', limit_direction='both')
-        # Fill median trạm
-        group[features_list] = group[features_list].fillna(group[features_list].median())
-        return group
+    # 4. Điền dữ liệu thiếu (Dùng transform để KHÔNG BAO GIỜ mất cột Station)
+    for col in valid_f:
+        df[col] = df.groupby('Station')[col].transform(
+            lambda x: x.interpolate(limit_direction='both').fillna(x.median())
+        )
 
-    df = df.groupby('Station').apply(fill_missing).reset_index(drop=True)
-    
-    # Fill median cho các ô feature bị thiếu
-    df[features_list] = df[features_list].fillna(df[features_list].median())
-
-    # Tạo Lag Features
+    # 5. Tạo các cột Lag (Trễ)
     lag_cols = []
-    for col in features_list:
+    for col in valid_f:
         for lag in lags:
             new_col_name = f"{col}_lag{lag}"
             lag_cols.append(new_col_name)
+            # Dùng transform shift để đảm bảo an toàn
             df[new_col_name] = df.groupby('Station')[col].shift(lag)
     
     df['Quarter_Num'] = df['Date'].dt.quarter
-    time_features = ['Quarter_Num']
-
-    df_final = df.dropna().reset_index(drop=True)
     
-    print(f"Kích thước dữ liệu train: {df_final.shape}")
+    # 6. Loại bỏ các dòng NaN do quá trình shift tạo ra
+    df_final = df.dropna().copy()
     
-    input_features = lag_cols + time_features
-    return df_final, input_features
+    print(f"--- THÀNH CÔNG ---")
+    print(f"Cột hiện có: {df_final.columns.tolist()[:3]}...")
+    print(f"Kích thước: {df_final.shape}")
+    
+    return df_final, lag_cols + ['Quarter_Num']
 
 # Hàm xử lý ngoại lệ
 def clip_percentile(series, lower=0.01, upper=0.99):
