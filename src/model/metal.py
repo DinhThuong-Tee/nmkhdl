@@ -37,3 +37,97 @@ def temporal_train_val_split(df, date_col="Quarter", n_val_quarters=2):
     print(f"📊 Train size: {len(df_train)} | Val size: {len(df_val)}")
     return df_train, df_val
 
+def train_model_with_station_history(csv_path, model_out_path):
+    df = pd.read_csv(csv_path)
+
+    target_cols = ["CN","As","Cd","Pb","Cu","Hg","Zn","Total_Cr"]
+
+    for c in target_cols:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # ---- xử lý thời gian ----
+    df["Quarter"] = pd.to_datetime(df["Quarter"])
+    df["year"] = df["Quarter"].dt.year
+    df["quarter"] = df["Quarter"].dt.quarter
+
+    # ---- tạo lag theo từng trạm ----
+    dfs = []
+    for (x, y), g in df.groupby(["X", "Y"]):
+        g_lag = create_lag_features(g, target_cols, lags=(1, 4))
+        dfs.append(g_lag)
+
+    df = pd.concat(dfs, ignore_index=True)
+
+    # ---- feature & target ----
+    feature_cols = (
+        [f"{c}_lag1" for c in target_cols] +
+        [f"{c}_lag4" for c in target_cols] +
+        ["year", "quarter"]
+    )
+
+    df = df[feature_cols + target_cols + ["X", "Y", "Quarter"]].dropna()
+
+    # ===== TEMPORAL TRAIN/VAL SPLIT =====
+    df_train, df_val = temporal_train_val_split(df, date_col="Quarter", n_val_quarters=2)
+    
+    X_train = df_train[feature_cols]
+    y_train = df_train[target_cols]
+    X_val = df_val[feature_cols]
+    y_val = df_val[target_cols]
+
+    # ===== HUẤN LUYỆN VỚI EARLY STOPPING =====
+    estimators = []
+    best_iterations = []
+    
+    print("\n⏳ Đang huấn luyện mô hình kim loại nặng với Early Stopping...")
+    print("-" * 50)
+    
+    for i, col_name in enumerate(target_cols):
+        est = xgb.XGBRegressor(
+            n_estimators=1500,
+            max_depth=5,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            objective="reg:squarederror",
+            early_stopping_rounds=50,
+            random_state=42,
+            n_jobs=-1
+        )
+        
+        est.fit(
+            X_train, y_train[col_name],
+            eval_set=[(X_val, y_val[col_name])],
+            verbose=False
+        )
+        
+        estimators.append(est)
+        best_iter = est.best_iteration if hasattr(est, 'best_iteration') else est.n_estimators
+        best_iterations.append(best_iter)
+
+    # ---- đánh giá train ----
+    y_train_pred = np.column_stack([est.predict(X_train) for est in estimators])
+    rmse_train = np.sqrt(mean_squared_error(y_train, y_train_pred, multioutput="raw_values"))
+
+    print("\n📊 RMSE (TRAIN):")
+    for c, r, bi in zip(target_cols, rmse_train, best_iterations):
+        print(f"  {c:<10}: {r:.4f}  (best_iter: {bi})")
+    
+    # ---- đánh giá validation (out-of-sample) ----
+    y_val_pred = np.column_stack([est.predict(X_val) for est in estimators])
+    rmse_val = np.sqrt(mean_squared_error(y_val, y_val_pred, multioutput="raw_values"))
+
+    print("\n📊 RMSE (VALIDATION - OUT-OF-SAMPLE):")
+    for c, r in zip(target_cols, rmse_val):
+        print(f"  {c:<10}: {r:.4f}")
+    
+    print("-" * 50)
+    print(f"👉 RMSE trung bình (train): {np.mean(rmse_train):.4f}")
+    print(f"👉 RMSE trung bình (val):   {np.mean(rmse_val):.4f}")
+
+    # ===== ĐÓNG GÓI LẠI ĐỂ TƯƠNG THÍCH VỚI INFERENCE CODE =====
+    model = MultiOutputRegressor(xgb.XGBRegressor())
+    model.estimators_ = estimators
+
+    joblib.dump((model, feature_cols), model_out_path)
+    print(f"\n✅ Saved model: {model_out_path}")
