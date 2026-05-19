@@ -131,3 +131,67 @@ def train_model_with_station_history(csv_path, model_out_path):
 
     joblib.dump((model, feature_cols), model_out_path)
     print(f"\n✅ Saved model: {model_out_path}")
+
+def predict_future_for_station(
+    model_path,
+    df_station,
+    start_year,
+    start_quarter,
+    n_quarters
+):
+    target_cols = ["CN","As","Cd","Pb","Cu","Hg","Zn","Total_Cr"]
+
+    model, feature_cols = joblib.load(model_path)
+
+    df_station = df_station.copy()
+    df_station["Quarter"] = pd.to_datetime(df_station["Quarter"])
+    df_station = df_station.sort_values("Quarter")
+
+    for c in target_cols:
+        df_station[c] = pd.to_numeric(df_station[c], errors="coerce")
+
+    # cần ít nhất 4 quý lịch sử
+    history = df_station[target_cols].iloc[-4:].copy()
+
+    results = []
+    year, quarter = start_year, start_quarter
+
+    for _ in range(n_quarters):
+        row = {}
+
+        for c in target_cols:
+            row[f"{c}_lag1"] = float(history[c].iloc[-1])
+            row[f"{c}_lag4"] = float(history[c].iloc[0])
+
+        row["year"] = int(year)
+        row["quarter"] = int(quarter)
+
+        X_pred = pd.DataFrame([row])[feature_cols]
+
+        # 🔒 ENSURE numeric 100%
+        X_pred = X_pred.astype(float)
+
+        y_pred = model.predict(X_pred)[0]
+
+        result = {"year": year, "quarter": quarter}
+        result.update(dict(zip(target_cols, y_pred)))
+        results.append(result)
+
+        # update history
+        history = pd.concat(
+            [history.iloc[1:], pd.DataFrame([y_pred], columns=target_cols)],
+            ignore_index=True
+        )
+
+        quarter += 1
+        if quarter > 4:
+            quarter = 1
+            year += 1
+    
+    df_future = pd.DataFrame(results)
+
+    # Clip giá trị âm (ràng buộc vật lý)
+    for c in target_cols:
+        df_future[c] = df_future[c].clip(lower=0)
+
+    return df_future
