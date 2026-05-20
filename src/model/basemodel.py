@@ -39,10 +39,11 @@ def prepare_time_series_data(csv_path, features_list, lags=[1, 4]):
     df['Date'] = pd.to_datetime(df['Quarter'], errors='coerce')
     df = df.dropna(subset=['Date']).sort_values(['Station', 'Date'])
 
-    # 4. Điền dữ liệu thiếu (Dùng transform để KHÔNG BAO GIỜ mất cột Station)
+    # 4. Điền dữ liệu thiếu (chỉ dùng dữ liệu quá khứ để tránh data leakage)
+    #    limit_direction='forward' đảm bảo không dùng giá trị tương lai để nội suy
     for col in valid_f:
         df[col] = df.groupby('Station')[col].transform(
-            lambda x: x.interpolate(limit_direction='both').fillna(x.median())
+            lambda x: x.interpolate(limit_direction='forward').fillna(x.median())
         )
 
     # 5. Tạo các cột Lag (Trễ)
@@ -82,49 +83,117 @@ def handle_outliers(df, features):
     return df
 
 
+def temporal_train_val_split(df, n_val_quarters=2):
+    """
+    Tách dữ liệu thành tập huấn luyện và tập kiểm chứng theo thời gian.
+    
+    Với mỗi trạm, N quý cuối cùng (theo thứ tự thời gian) được giữ lại
+    làm tập validation. Đảm bảo không có rò rỉ dữ liệu từ tương lai.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame đã chuẩn bị xong (có cột 'Station' và 'Date').
+    n_val_quarters : int
+        Số quý cuối cùng dùng làm tập validation cho mỗi trạm.
+    
+    Returns
+    -------
+    df_train, df_val : tuple of pd.DataFrame
+    """
+    val_mask = df.groupby('Station')['Date'].transform(
+        lambda x: x >= x.nlargest(n_val_quarters).min()
+    )
+    df_train = df[~val_mask].copy()
+    df_val = df[val_mask].copy()
+    
+    print(f"📊 Train size: {len(df_train)} | Val size: {len(df_val)}")
+    return df_train, df_val
+
+
 # Hàm huấn luyện
 def train_forecast_model(csv_path, features, model_out_path, meta_out_path=None):
     model_out_path = str(model_out_path)
     
-    df_train, input_cols = prepare_time_series_data(csv_path, features, lags=[1, 4])
+    df_all, input_cols = prepare_time_series_data(csv_path, features, lags=[1, 4])
     
-    if df_train is None:
+    if df_all is None:
         return
     
-    df_train = handle_outliers(df_train, features)
+    df_all = handle_outliers(df_all, features)
 
-    X = df_train[input_cols]      # Quá khứ
-    y = df_train[features]        # Hiện tại (Mục tiêu)
-
-    # Các tham số
-    model = MultiOutputRegressor(xgb.XGBRegressor(
-        n_estimators=1000,
-        learning_rate=0.05,
-        max_depth=5,            # Độ sâu trung bình (tránh overfit)
-        subsample=0.8,          # Mỗi cây học 80% số dòng
-        colsample_bytree=0.8,   # Mỗi cây học 80% số cột, giống kiểu drop out trong NN
-        objective='reg:squarederror',
-        n_jobs=-1,
-        random_state=42
-    ))
-
-    model.fit(X, y)
+    # ===== TEMPORAL TRAIN/VAL SPLIT =====
+    df_train, df_val = temporal_train_val_split(df_all, n_val_quarters=2)
     
-    # Tính RMSE sau khi train (dùng tập train để test nên là kết quả ko có ý nghĩa lắm)
+    X_train = df_train[input_cols]
+    y_train = df_train[features]
+    X_val = df_val[input_cols]
+    y_val = df_val[features]
+
+    # ===== HUẤN LUYỆN VỚI EARLY STOPPING =====
+    # Sử dụng vòng lặp thủ công thay vì MultiOutputRegressor để hỗ trợ
+    # early stopping cho từng biến mục tiêu
+    estimators = []
+    best_iterations = []
+    
+    print("\n⏳ Đang huấn luyện mô hình với Early Stopping...")
+    print("-" * 50)
+    
+    for i, col_name in enumerate(features):
+        est = xgb.XGBRegressor(
+            n_estimators=2000,          # Tăng giới hạn trên, early stopping sẽ dừng sớm
+            learning_rate=0.05,
+            max_depth=5,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            objective='reg:squarederror',
+            early_stopping_rounds=50,
+            n_jobs=-1,
+            random_state=42
+        )
+        
+        est.fit(
+            X_train, y_train[col_name],
+            eval_set=[(X_val, y_val[col_name])],
+            verbose=False
+        )
+        
+        estimators.append(est)
+        best_iter = est.best_iteration if hasattr(est, 'best_iteration') else est.n_estimators
+        best_iterations.append(best_iter)
+    
+    # ===== ĐÁNH GIÁ TRÊN TẬP HUẤN LUYỆN =====
     print("\n📊 KẾT QUẢ ĐÁNH GIÁ (TRAINING SCORE):")
     print("-" * 50)
     
-    y_pred = model.predict(X)
-    
-    mse = mean_squared_error(y, y_pred, multioutput='raw_values')
-    rmse = np.sqrt(mse)
+    y_train_pred = np.column_stack([est.predict(X_train) for est in estimators])
+    mse_train = mean_squared_error(y_train, y_train_pred, multioutput='raw_values')
+    rmse_train = np.sqrt(mse_train)
     
     for i, col_name in enumerate(features):
-        print(f"   🔹 {col_name:<15} RMSE: {rmse[i]:.4f}")
+        print(f"   🔹 {col_name:<15} RMSE(train): {rmse_train[i]:.4f}  "
+              f"(best_iter: {best_iterations[i]})")
+    
+    # ===== ĐÁNH GIÁ TRÊN TẬP VALIDATION (OUT-OF-SAMPLE) =====
+    print("\n📊 KẾT QUẢ ĐÁNH GIÁ (VALIDATION SCORE - OUT-OF-SAMPLE):")
+    print("-" * 50)
+    
+    y_val_pred = np.column_stack([est.predict(X_val) for est in estimators])
+    mse_val = mean_squared_error(y_val, y_val_pred, multioutput='raw_values')
+    rmse_val = np.sqrt(mse_val)
+    
+    for i, col_name in enumerate(features):
+        print(f"   🔹 {col_name:<15} RMSE(val): {rmse_val[i]:.4f}")
         
     print("-" * 50)
-    print(f"👉 RMSE trung bình toàn mô hình: {np.mean(rmse):.4f}")
+    print(f"👉 RMSE trung bình (train): {np.mean(rmse_train):.4f}")
+    print(f"👉 RMSE trung bình (val):   {np.mean(rmse_val):.4f}")
 
+    # ===== ĐÓNG GÓI THÀNH MultiOutputRegressor-COMPATIBLE OBJECT =====
+    # Tạo lại wrapper để giữ tương thích với code inference hiện tại
+    # (model.predict(X) trả về ma trận [n_samples, n_features])
+    model = MultiOutputRegressor(xgb.XGBRegressor())
+    model.estimators_ = estimators
 
     # Lưu model
     joblib.dump(model, model_out_path)
