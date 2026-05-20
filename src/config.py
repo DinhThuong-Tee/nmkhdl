@@ -1,18 +1,3 @@
-"""
-Centralized configuration for the nmkhdl marine forecasting project.
-
-This module defines all shared constants — file paths, feature lists,
-model hyperparameters, and HSI evaluation thresholds — so that individual
-scripts do not need to repeat them.
-
-Usage:
-    from config import (
-        PROJECT_DIR, DATA_DIR, MODEL_OUTPUT_DIR,
-        OYSTER_FEATURES, COBIA_FEATURES, METAL_FEATURES,
-        BASE_XGB_PARAMS, METAL_XGB_PARAMS, FINETUNE_LEARNING_RATE,
-    )
-"""
-
 from pathlib import Path
 
 
@@ -33,20 +18,38 @@ QN_COORDS_CSV = QN_DATA_DIR / "toa_do_qn.csv"
 
 # Hàu (Oyster) — 12 environmental features
 OYSTER_FEATURES = [
-    'DO', 'Temperature', 'pH', 'Salinity', 'NH3', 'H2S', 'BOD5', 'COD',
-    'TSS', 'Coliform', 'Alkalinity', 'Transparency',
+    "DO",
+    "Temperature",
+    "pH",
+    "Salinity",
+    "NH3",
+    "H2S",
+    "BOD5",
+    "COD",
+    "TSS",
+    "Coliform",
+    "Alkalinity",
+    "Transparency",
 ]
 
 # Cá giò (Cobia) — 12 environmental features
 COBIA_FEATURES = [
-    'DO', 'Temperature', 'pH', 'Salinity', 'NH3', 'PO4', 'BOD5', 'COD',
-    'TSS', 'Coliform', 'Alkalinity', 'Transparency'
+    "DO",
+    "Temperature",
+    "pH",
+    "Salinity",
+    "NH3",
+    "PO4",
+    "BOD5",
+    "COD",
+    "TSS",
+    "Coliform",
+    "Alkalinity",
+    "Transparency",
 ]
 
 # Kim loại nặng (Heavy metals) — 8 chemical features
-METAL_FEATURES = [
-    "CN", "As", "Cd", "Pb", "Cu", "Hg", "Zn", "Total_Cr"
-]
+METAL_FEATURES = ["CN", "As", "Cd", "Pb", "Cu", "Hg", "Zn", "Total_Cr"]
 
 # Default lag periods for time-series feature construction
 DEFAULT_LAGS = [1, 4]
@@ -61,7 +64,7 @@ BASE_XGB_PARAMS = dict(
     max_depth=5,
     subsample=0.8,
     colsample_bytree=0.8,
-    objective='reg:squarederror',
+    objective="reg:squarederror",
     n_jobs=-1,
     random_state=42,
 )
@@ -73,7 +76,7 @@ METAL_XGB_PARAMS = dict(
     max_depth=5,
     subsample=0.8,
     colsample_bytree=0.8,
-    objective='reg:squarederror',
+    objective="reg:squarederror",
     n_jobs=-1,
     random_state=42,
 )
