@@ -111,19 +111,21 @@ def compute_R_for_all_stations_all_quarters(
 
     return pd.DataFrame(results)
 
-BASE_DIR = pathlib.Path(__file__).resolve().parent
-PROJECT_DIR = BASE_DIR.parent
-DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "toa_do_qn.csv"
-OUT_DIR = PROJECT_DIR / "data" / "data_quang_ninh"
+if __name__ == "__main__":
+    BASE_DIR = pathlib.Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "toa_do_qn.csv"
+    OUT_DIR = PROJECT_DIR / "data" / "data_quang_ninh"
 
-# Cho hàu
-df_R_oyster = compute_R_for_all_stations_all_quarters(
-    hsi_csv_path=OUT_DIR / "hsi_oyster.csv",
-)
-df_R_oyster.to_csv(OUT_DIR / "R_oyster.csv", index=False)
+    # Cho hàu
+    df_R_oyster = compute_R_for_all_stations_all_quarters(
+        hsi_csv_path=OUT_DIR / "hsi_oyster.csv",
+    )
+    df_R_oyster.to_csv(OUT_DIR / "R_oyster.csv", index=False)
 
-# Cho cá giò
-df_R_cobia = compute_R_for_all_stations_all_quarters(
-    hsi_csv_path=OUT_DIR / "hsi_cobia.csv",
-)
-df_R_cobia.to_csv(OUT_DIR / "R_cobia.csv", index=False)
+    # Cho cá giò
+    df_R_cobia = compute_R_for_all_stations_all_quarters(
+        hsi_csv_path=OUT_DIR / "hsi_cobia.csv",
+    )
+    df_R_cobia.to_csv(OUT_DIR / "R_cobia.csv", index=False)
+
