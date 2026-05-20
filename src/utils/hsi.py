@@ -143,7 +143,6 @@ if __name__ == "__main__":
     BASE_DIR = pathlib.Path(__file__).resolve().parent
     PROJECT_DIR = BASE_DIR.parent
     DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
-    model_path = PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
 
     # ===== COMPUTE HSI CHO TOÀN BỘ DỮ LIỆU VÀ TÍNH PHÂN PHỐI NHÃN HSI =====
     df = pd.read_csv(DATA_PATH)

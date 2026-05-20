@@ -46,12 +46,13 @@ def seasonal_persistence_forecast(history, n_quarters, features):
     Dự báo bằng phương pháp lặp lại giá trị cùng kỳ năm trước
     (Seasonal Persistence / Seasonal Naïve).
 
-    Yêu cầu ít nhất 4 quý lịch sử (để có 1 chu kỳ năm hoàn chỉnh).
+    Hoạt động tốt nhất với ≥4 quý lịch sử (1 chu kỳ năm hoàn chỉnh).
+    Nếu ít hơn 4 quý, sử dụng chu kỳ ngắn hơn bằng số quý hiện có.
 
     Parameters
     ----------
     history : pd.DataFrame
-        Dữ liệu lịch sử (≥ 4 dòng).
+        Dữ liệu lịch sử (≥ 1 dòng).
     n_quarters : int
         Số quý cần dự báo.
     features : list of str

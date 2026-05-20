@@ -40,10 +40,12 @@ def prepare_time_series_data(csv_path, features_list, lags=[1, 4]):
     df = df.dropna(subset=['Date']).sort_values(['Station', 'Date'])
 
     # 4. Điền dữ liệu thiếu (chỉ dùng dữ liệu quá khứ để tránh data leakage)
-    #    limit_direction='forward' đảm bảo không dùng giá trị tương lai để nội suy
+    #    Sử dụng ffill (forward-fill) thay vì interpolate để đảm bảo KHÔNG
+    #    dùng bất kỳ giá trị tương lai nào. Linear interpolation giữa 2 điểm
+    #    đã biết vẫn sử dụng điểm tương lai, nên không an toàn.
     for col in valid_f:
         df[col] = df.groupby('Station')[col].transform(
-            lambda x: x.interpolate(limit_direction='forward').fillna(x.median())
+            lambda x: x.ffill().fillna(x.median())
         )
 
     # 5. Tạo các cột Lag (Trễ)
@@ -89,6 +91,9 @@ def temporal_train_val_split(df, n_val_quarters=2):
     
     Với mỗi trạm, N quý cuối cùng (theo thứ tự thời gian) được giữ lại
     làm tập validation. Đảm bảo không có rò rỉ dữ liệu từ tương lai.
+    Nếu trạm có ít hơn n_val_quarters+1 quý, chỉ giữ lại tối đa
+    len(group)-1 quý cho validation để đảm bảo luôn có ít nhất 1 dòng
+    trong tập huấn luyện.
     
     Parameters
     ----------
@@ -101,9 +106,13 @@ def temporal_train_val_split(df, n_val_quarters=2):
     -------
     df_train, df_val : tuple of pd.DataFrame
     """
-    val_mask = df.groupby('Station')['Date'].transform(
-        lambda x: x >= x.nlargest(n_val_quarters).min()
-    )
+    def _val_mask_for_group(dates):
+        n = min(n_val_quarters, len(dates) - 1)  # Luôn giữ ≥1 dòng cho train
+        if n <= 0:
+            return pd.Series(False, index=dates.index)
+        return dates >= dates.nlargest(n).min()
+
+    val_mask = df.groupby('Station')['Date'].transform(_val_mask_for_group)
     df_train = df[~val_mask].copy()
     df_val = df[val_mask].copy()
     
