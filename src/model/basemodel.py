@@ -40,12 +40,12 @@ def prepare_time_series_data(csv_path, features_list, lags=[1, 4]):
     df = df.dropna(subset=['Date']).sort_values(['Station', 'Date'])
 
     # 4. Điền dữ liệu thiếu (chỉ dùng dữ liệu quá khứ để tránh data leakage)
-    #    Sử dụng ffill (forward-fill) thay vì interpolate để đảm bảo KHÔNG
-    #    dùng bất kỳ giá trị tương lai nào. Linear interpolation giữa 2 điểm
-    #    đã biết vẫn sử dụng điểm tương lai, nên không an toàn.
+    #    Sử dụng ffill (forward-fill) — giá trị tương lai KHÔNG bao giờ được dùng.
+    #    NaN đầu chuỗi (trước quan trắc đầu tiên) được giữ nguyên và sẽ bị loại
+    #    bởi dropna() sau khi tạo lag features (shift(4) tạo NaN ở 4 dòng đầu).
     for col in valid_f:
         df[col] = df.groupby('Station')[col].transform(
-            lambda x: x.ffill().fillna(x.median())
+            lambda x: x.ffill()
         )
 
     # 5. Tạo các cột Lag (Trễ)
