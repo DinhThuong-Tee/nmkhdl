@@ -195,3 +195,28 @@ def predict_future_for_station(
         df_future[c] = df_future[c].clip(lower=0)
 
     return df_future
+
+if __name__ == "__main__":
+    BASE_DIR = Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+
+    DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    MODEL_PATH = PROJECT_DIR / "model" / "output" / "metal_ts_model.pkl"
+
+    # ===== TRAIN =====
+    train_model_with_station_history(DATA_PATH, MODEL_PATH)
+
+    # ===== PREDICT cho 1 trạm =====
+    df = pd.read_csv(DATA_PATH)
+    df_station = df[(df["X"] == 2318587) & (df["Y"] == 428692)]
+
+    df_future = predict_future_for_station(
+        MODEL_PATH,
+        df_station,
+        start_year=2026,
+        start_quarter=1,
+        n_quarters=8   # 2 năm
+    )
+
+    print("\n🔮 Forecast:")
+    print(df_future)
