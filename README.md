@@ -81,13 +81,3 @@ với mô hình cơ sở:
 📄 Giấy phép
 
 Dự án được thực hiện cho mục đích học tập tại Đại học Bách Khoa Hà Nội.
-
-Mẹo cho bạn:
-
-1.  Requirements.txt: Hãy nhớ tạo file này bằng cách chạy lệnh pip freeze >
-    requirements.txt trong môi trường ảo của bạn.
-2.  Screenshots: Hãy chụp 1-2 ảnh đẹp về giao diện Dashboard và lưu vào thư mục
-    /assets, sau đó chèn vào README để nhìn chuyên nghiệp hơn. (Ví dụ:
-    ![Dashboard Demo](assets/demo.png)).
-3.  About section: Trên GitHub, hãy thêm các tag như #machine-learning,
-    #aquaculture, #hust, #streamlit để project dễ được tìm thấy.
