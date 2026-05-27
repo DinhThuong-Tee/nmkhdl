@@ -139,4 +139,4 @@ if __name__ == "__main__":
         new_data_path = NEW_DATA_PATH,
         output_path = OUTPUT_FINETUNE,
         features_list = COBIA_FEATURES
-    )
+    )# TODO: Connect LSTM hidden states into XGBoost multi-output regressor
