@@ -102,3 +102,29 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
     joblib.dump((input_cols_old, features_list), output_path.replace('.pkl', '_features.pkl'))
     
     print(f"\n🎉 Đã lưu model Fine-tune tại: {output_path}")
+
+    if __name__ == "__main__":
+    # --- CẤU HÌNH ĐƯỜNG DẪN ---
+    BASE_DIR = Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+    
+    # Đường dẫn model gốc (Base Model)
+    MODEL_DIR = PROJECT_DIR / "model" / "output"
+    BASE_OYSTER_MODEL = MODEL_DIR / "hk_oyster_forecast_model.pkl"
+    
+    # Đường dẫn dữ liệu mới để Fine-tune (Ví dụ: Dữ liệu năm 2024 mới về, hoặc dữ liệu riêng của 1 vùng)
+    # Ở đây tôi dùng lại file csv cũ làm ví dụ, thực tế bạn thay bằng file mới
+    NEW_DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    
+    # Đường dẫn lưu model mới
+    OUTPUT_FINETUNE = MODEL_DIR / "hk_oyster_finetuned.pkl"
+
+    print(f"📂 Base Model: {BASE_OYSTER_MODEL}")
+    
+    # Chạy Fine-tune cho HÀU (Ví dụ)
+    finetune_model(
+        base_model_path = BASE_OYSTER_MODEL,
+        new_data_path = NEW_DATA_PATH,
+        output_path = OUTPUT_FINETUNE,
+        features_list = OYSTER_FEATURES
+    )
