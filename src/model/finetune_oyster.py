@@ -58,7 +58,6 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
 
     print(f"📊 Kích thước dữ liệu Fine-tune: Train={len(X_train)}, Val={len(X_val)}")
 
-    
     # 4. THỰC HIỆN FINE-TUNE VỚI EARLY STOPPING
     print("⏳ Đang cập nhật kiến thức mới cho mô hình...")
     
@@ -103,7 +102,8 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
     
     print(f"\n🎉 Đã lưu model Fine-tune tại: {output_path}")
 
-    if __name__ == "__main__":
+
+if __name__ == "__main__":
     # --- CẤU HÌNH ĐƯỜNG DẪN ---
     BASE_DIR = Path(__file__).resolve().parent
     PROJECT_DIR = BASE_DIR.parent
