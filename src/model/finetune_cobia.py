@@ -106,3 +106,24 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
     print("-" * 50)
     print(f"👉 RMSE trung bình (train): {np.mean(rmse_train):.4f}")
     print(f"👉 RMSE trung bình (val):   {np.mean(rmse_val):.4f}")
+
+ # 7. LƯU MÔ HÌNH MỚI (FINETUNED MODEL)
+    joblib.dump(model, output_path)
+    # Lưu luôn metadata cho model mới (thực ra vẫn y hệt cái cũ)
+    joblib.dump((input_cols_old, features_list), output_path.replace('.pkl', '_features.pkl'))
+    
+    print(f"\n🎉 Đã lưu model Fine-tune tại: {output_path}")
+
+
+if __name__ == "__main__":
+    # --- CẤU HÌNH ĐƯỜNG DẪN ---
+    BASE_DIR = Path(__file__).resolve().parent
+    PROJECT_DIR = BASE_DIR.parent
+    
+    # Đường dẫn model gốc (Base Model)
+    MODEL_DIR = PROJECT_DIR / "model" / "output"
+    BASE_COBIA_MODEL = MODEL_DIR / "hk_cobia_forecast_model.pkl"
+    
+    # Đường dẫn dữ liệu mới để Fine-tune (Ví dụ: Dữ liệu năm 2024 mới về, hoặc dữ liệu riêng của 1 vùng)
+    # Ở đây tôi dùng lại file csv cũ làm ví dụ, thực tế bạn thay bằng file mới
+    NEW_DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
