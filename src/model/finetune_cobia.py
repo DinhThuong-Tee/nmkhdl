@@ -25,8 +25,8 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
     if not os.path.exists(base_model_path):
         print(f"❌ Lỗi: Không tìm thấy file model gốc tại {base_model_path}")
         return
-    
-        model = joblib.load(base_model_path)
+
+    model = joblib.load(base_model_path)
     print("✅ Đã load xong model gốc.")
 
     # 2. LOAD METADATA (Để biết ngày xưa train dùng cột nào)
@@ -59,7 +59,7 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
 
     print(f"📊 Kích thước dữ liệu Fine-tune: Train={len(X_train)}, Val={len(X_val)}")
 
-        # 4. THỰC HIỆN FINE-TUNE (CẬP NHẬT TRỌNG SỐ) VỚI EARLY STOPPING
+    # 4. THỰC HIỆN FINE-TUNE (CẬP NHẬT TRỌNG SỐ) VỚI EARLY STOPPING
     # Vì model là MultiOutputRegressor (chứa nhiều model con), ta phải update từng cái
     
     print("⏳ Đang cập nhật kiến thức mới cho mô hình...")
@@ -107,7 +107,7 @@ def finetune_model(base_model_path, new_data_path, output_path, features_list):
     print(f"👉 RMSE trung bình (train): {np.mean(rmse_train):.4f}")
     print(f"👉 RMSE trung bình (val):   {np.mean(rmse_val):.4f}")
 
- # 7. LƯU MÔ HÌNH MỚI (FINETUNED MODEL)
+    # 7. LƯU MÔ HÌNH MỚI (FINETUNED MODEL)
     joblib.dump(model, output_path)
     # Lưu luôn metadata cho model mới (thực ra vẫn y hệt cái cũ)
     joblib.dump((input_cols_old, features_list), output_path.replace('.pkl', '_features.pkl'))
@@ -127,3 +127,16 @@ if __name__ == "__main__":
     # Đường dẫn dữ liệu mới để Fine-tune (Ví dụ: Dữ liệu năm 2024 mới về, hoặc dữ liệu riêng của 1 vùng)
     # Ở đây tôi dùng lại file csv cũ làm ví dụ, thực tế bạn thay bằng file mới
     NEW_DATA_PATH = PROJECT_DIR / "data" / "data_quang_ninh" / "qn_env_clean_ready.csv"
+    
+    # Đường dẫn lưu model mới
+    OUTPUT_FINETUNE = MODEL_DIR / "hk_cobia_finetuned.pkl"
+
+    print(f"📂 Base Model: {BASE_COBIA_MODEL}")
+
+    # Chạy Fine-tune cho CÁ GIÒ (Ví dụ)
+    finetune_model(
+        base_model_path = BASE_COBIA_MODEL,
+        new_data_path = NEW_DATA_PATH,
+        output_path = OUTPUT_FINETUNE,
+        features_list = COBIA_FEATURES
+    )
